@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: k8s-access-token-secret
+  namespace: $namespace
+type: Opaque
+data:
+  token: "$token"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: $site
+  namespace: $namespace
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: $site
+  template:
+    metadata:
+      labels:
+        app: $site
+    spec:
+      containers:
+      - name: $site
+        image: caddy:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+          - name: site
+            mountPath: /var/www/html
+          - name: caddy-config
+            mountPath: /etc/caddy/Caddyfile
+            subPath: Caddyfile
+      initContainers:
+      - name: init-container
+        image: ubuntu:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          apt-get update && apt-get install wget unzip -y
+          mkdir -p /tmp/site
+          cd /tmp/site
+          wget --header="Authorization: Basic $token" "$artifact_url" -O site.zip
+          unzip site.zip
+          mv -n site/* /var/www/html/
+          rm -rf /tmp/site
+        env:
+        - name: token
+          valueFrom:
+            secretKeyRef:
+              name: k8s-access-token-secret
+              key: token
+        - name: artifact_url
+          value: '$artifact_url'
+        volumeMounts:
+          - name: site
+            mountPath: /var/www/html
+      volumes:
+      - name: site
+        emptyDir: {}
+      - name: caddy-config
+        configMap:
+          name: caddy-configmap
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: caddy-configmap
+  namespace: $namespace
+data:
+  Caddyfile: |
+    :80 {
+          root * /var/www/html
+          file_server
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: $site-service
+  namespace: $namespace
+spec:
+  selector:
+    app: $site
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: $site-ingress
+  namespace: $namespace
+spec:
+  rules:
+    - host: $site_url
+      http:
+        paths:
+          - backend:
+              service:
+                name: $site-service
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix

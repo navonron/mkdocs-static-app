@@ -1,0 +1,80 @@
+site_name: iBI DevOps Docs
+
+theme:
+  name: material
+  font:
+    text: "Adobe Sabon"
+  features:
+    - navigation.tracking
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    # - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+    # - navigation.indexes
+    - navigation.prune
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+    - content.code.select
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/toggle-switch-off-outline 
+        name: Switch to dark mode
+      # primary: teal
+      # accent: purple 
+    - scheme: slate 
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode    
+      # primary: teal
+      # accent: lime
+plugins:
+  - offline
+  - search
+  - tags
+
+markdown_extensions:
+  - admonition
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - tables
+  - toc:
+      permalink: "#"
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/tablesort.min.js
+  - javascripts/tablesort.js
+
+extra:
+  # consent:
+  #   title: Cookie consent
+  #   description: >- 
+  #     We use cookies to recognize your repeated visits and preferences, as well
+  #     as to measure the effectiveness of our documentation and whether users
+  #     find what they're searching for. With your consent, you're helping us to
+  #     make our documentation better.
+  social:
+    - icon: fontawesome/brands/git-alt
+      link: https://dev.azure.com/ <organization-name>/DevOps/_git/wiki
+
+copyright: >
+  Copyright &copy; 2023 - 2023

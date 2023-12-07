@@ -1,0 +1,6 @@
+
+#### Transparent Arrow
+
+```
+-[#transparent]->
+```

@@ -1,0 +1,6 @@
+venv
+.obsidian
+*.log
+.trash
+Context
+site/

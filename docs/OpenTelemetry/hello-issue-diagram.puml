@@ -1,0 +1,61 @@
+@startuml Hello Service Diagram
+skinparam ranksep 20
+skinparam dpi 150
+skinparam arrowThickness 0.7
+skinparam packageTitleAlignment left
+skinparam usecaseBorderThickness 0.4
+skinparam defaultFontSize 12
+skinparam rectangleBorderThickness 1
+
+actor "Client" as Client
+
+
+package "Kubernetes Cluster" #lightblue {
+    rectangle "OpenTelemetry Infra" as OpenTelemetryInfra
+
+    package "Development Environment" #white {
+        rectangle "Gateway Ingress" as GatewayIngress #b3f542
+        rectangle "Gateway Service" as GatewaySvc #b3f542
+        rectangle "Gateway Pod 1" as GatewayPod1 #b3f542
+        rectangle "Gateway Pod 2" as GatewayPod2 #b3f542
+        rectangle "Gateway Pod 3" as GatewayPod3 #b3f542
+        GatewayIngress <-down-> GatewaySvc
+        GatewaySvc <-down-> GatewayPod1
+        GatewaySvc <-down-> GatewayPod2
+        GatewaySvc <-down-> GatewayPod3
+
+        rectangle "Hello Service" as HelloSvc #f5a442
+        rectangle "Hello Pod 1" as HelloPod1 #orange
+        rectangle "Hello Pod 2" as HelloPod2 #orange
+        rectangle "Hello Pod 3" as HelloPod3 #orange
+        HelloSvc <-down-> HelloPod1
+        HelloSvc <-down-> HelloPod2
+        HelloSvc <-down-> HelloPod3
+
+        GatewayPod1 <-down-> HelloSvc
+        GatewayPod2 <-down-> HelloSvc
+        GatewayPod3 <-down-> HelloSvc
+    }
+}
+
+Client -left[#red]-> GatewayIngress : Regular
+Client -left[#red]-> GatewaySvc : Port Fowarding
+Client -left[#green]-> HelloSvc : Port Fowarding\n(Direct Communication)
+
+
+package "Client PC" as ClientPC{
+    rectangle "Hello Pod" as HelloPod #orange
+}
+Client -left[#green]-> HelloPod : Direct Communication
+
+package "Elastic Cloud" {
+    rectangle "APM Server" as apm_server
+
+}
+HelloPod -down-> OpenTelemetryInfra
+HelloPod1 -down-> OpenTelemetryInfra
+HelloPod2 -down-> OpenTelemetryInfra
+HelloPod3 -down-> OpenTelemetryInfra
+
+OpenTelemetryInfra -down-> apm_server
+@enduml

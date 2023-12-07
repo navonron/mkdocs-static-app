@@ -1,0 +1,11 @@
+{
+	"nodes":[
+		{"type":"file","file":"docs/New Employee Guide/AGS Permissions.md","id":"12012f84eeaff852","x":-1380,"y":-860,"width":620,"height":780},
+		{"id":"25fc28b58a3291ee","x":-740,"y":-860,"width":560,"height":440,"type":"file","file":"docs/New Employee Guide/Azure DevOps.md"},
+		{"id":"789545d3acdae57c","x":-160,"y":-860,"width":400,"height":400,"type":"file","file":"docs/New Employee Guide/Jira.md"},
+		{"id":"10e5895979c7ef14","x":-740,"y":-400,"width":560,"height":320,"type":"file","file":"docs/New Employee Guide/Saba Courses.md"},
+		{"id":"185366ed40ee782e","x":-740,"y":-60,"width":560,"height":400,"type":"file","file":"docs/New Employee Guide/HighWire.md"},
+		{"id":"babe657955fd2635","x":-1380,"y":-54,"width":620,"height":394,"type":"file","file":"docs/New Employee Guide/IEM2 Permissions.md"}
+	],
+	"edges":[]
+}

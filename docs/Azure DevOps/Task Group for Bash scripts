@@ -1,0 +1,22 @@
+# Task Group for scripts
+
+This originally came up as part of the scripts migration task that is in the work.
+
+When running scripts from a task group using the bash task with **FILE PATH**, and require environment variables to be defined.
+The goal is to be able to expose variables that are used as environment variables inside scripts.
+
+From [This Github Issue Link](https://github.com/MicrosoftDocs/azure-devops-docs/issues/3355#issuecomment-519381328) we can learn that it's no possible to define Azure DevOps 'Parameters' as environment variables in a release.
+
+In order to overcome this issue: follow the below steps.
+
+### Use the "Command Line" task
+
+![](./Task%20Group%20for%20Bash%20scripts%201.png)
+
+### And exported each variables to env
+
+Export the environment variables using the inline mode of the "Command Line" Script.
+Then run the scripts as you normally would in an file path task.
+
+![](./Task%20Group%20for%20Bash%20scripts%202.png)
+ 
