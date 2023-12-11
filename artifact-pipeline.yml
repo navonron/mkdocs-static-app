@@ -1,0 +1,21 @@
+trigger: none
+
+jobs:
+- job: azure_devops_agent
+  displayName: 'MKdocs static site artifact build and publish'
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+    - task: Bash@3
+      displayName: 'install MKdocs and run MKdocs build'
+      inputs:
+        targetType: inline
+        script: |
+          sudo apt install python3-pip
+          pip3 install --upgrade pip && pip3 install mkdocs mkdocs-material mkdocs-material-extensions
+          mkdocs build
+    - task: PublishBuildArtifacts@1
+      displayName: 'publish MKdocs static site artifact'
+      inputs:
+        PathtoPublish: '$(Build.SourcesDirectory)/site'
+        artifactName: 'site'

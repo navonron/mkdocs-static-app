@@ -1,0 +1,108 @@
+trigger: []
+
+resources:
+  repositories:
+    - repository: staticapp              # The alias of the repo in this pipeline
+      type: git                          # A git repository
+      name: DevOps/staticapp-chart       # The project/repository
+      ref: refs/heads/ron                # What branch / tag to get.
+  pipelines:
+    - pipeline: artifactpipeline         # identifier for the resource used in pipeline resource variables
+      source: artifact-pipeline          # name of the pipeline that produces an artifact
+
+variables:
+  - group: wiki-token
+  - name: site
+    value: libi-devops-docs
+  - name: site-url
+    value: libi-devops-docs.iil.intel.com
+  - name: namespace
+    value: devops-infra
+  - name: k8s-connection
+    value: GER Rancher (ibiuser)
+  - name: chart-version
+    value: 0.1.0
+
+jobs:
+- job: self_signed_agent
+  displayName: 'static site helm chart deployment'
+  pool: Development
+  steps:
+    - task: Kubernetes@1
+      displayName: 'kubernetes cluster login'
+      inputs:
+        connectionType: Kubernetes Service Connection
+        kubernetesServiceEndpoint: $(k8s-connection)
+        command: login
+    
+    - task: Bash@3
+      displayName: 'install helm'
+      inputs:
+        targetType: inline
+        script: |
+          apt-get update && apt-get install wget -y
+          wget https://get.helm.sh/helm-v3.13.0-linux-amd64.tar.gz
+          tar xvf helm-v3.13.0-linux-amd64.tar.gz
+          mv linux-amd64/helm /usr/local/bin
+  
+    - checkout: staticapp
+    - task: Bash@3
+      displayName: 'Trivy scan'
+      inputs:
+        targetType: 'inline'
+        script: |
+          echo -------------------------------------------
+          echo ---------------install Trivy---------------
+          echo -------------------------------------------
+          apt-get install wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | tee -a /etc/apt/sources.list.d/trivy.list
+          apt-get update
+          apt-get install trivy
+          echo -------------------------------------------
+          echo ----------------scanning...----------------
+          echo -------------------------------------------
+          trivy config .
+    
+    - task: Bash@3
+      displayName: 'bitnami readme generator'
+      inputs:
+        targetType: 'inline'
+        script: |
+          node -v
+          echo -------------------------------------------
+          git clone https://github.com/bitnami/readme-generator-for-helm
+          cd ./readme-generator-for-helm
+          npm install
+          npm install -g .
+          echo -------------------------------------------
+
+          readme-generator -v ../values.yaml --readme ../README.md
+          echo -------------------------------------------
+
+          cat ../README.md
+          echo -------------------------------------------
+
+          cd ..
+          rm -rf ./readme-generator-for-helm
+
+          echo -------------------------------------------
+          git config --global --edit
+          git commit --amend --reset-author
+          git add README.md
+          git commit -m "Update README.md with generated content"
+          git push https://$(token)@dev.azure.com/sagixavisar/DevOps/_git/staticapp-chart HEAD:ron
+
+    - task: Bash@3
+      displayName: 'install / upgrade chart'
+      inputs:
+        targetType: inline
+        script: |
+          token=$(echo -n "pat:$(token)" | base64)
+          helm upgrade $(site) . --debug --install --insecure-skip-tls-verify --namespace $(namespace) --set artifact.token="$token" --set site.url=$(site-url) --set artifact.url="$(System.TeamFoundationCollectionUri)$(System.TeamProjectId)/_apis/build/builds/$(resources.pipeline.artifactpipeline.runID)/artifacts?artifactName=site&api-version=7.1&%24format=zip"
+
+    - task: git-tag-on-release-task@9
+      displayName: 'add version tag on pr to master'
+      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+      inputs:
+        staticTagName: '$(Build.BuildId)'

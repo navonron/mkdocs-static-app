@@ -1,4 +1,4 @@
-trigger: []
+trigger: none
 
 variables:
 - group: wiki-token
@@ -13,54 +13,60 @@ variables:
 - name: chart_version
   value: 0.1.0
 
+resources:
+  repositories:
+    - repository: staticapp              # The alias of the repo in this pipeline
+      type: git                          # A git repository
+      name: DevOps/staticapp-chart       # The project/repository
+      ref: refs/heads/ron                # What branch / tag to get.
+
+
 jobs:
-  - job: azure_devops_agent
-    displayName: 'MKdocs static site artifact build and publish'
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-      - task: Bash@3
-        displayName: 'install MKdocs and run MKdocs build'
-        inputs:
-          targetType: inline
-          script: |
-            sudo apt install python3-pip
-            pip3 install --upgrade pip && pip3 install mkdocs mkdocs-material mkdocs-material-extensions
-            mkdocs build
-      - task: PublishBuildArtifacts@1
-        displayName: 'publish MKdocs static site artifact'
-        inputs:
-          PathtoPublish: '$(Build.SourcesDirectory)/site'
-          artifactName: 'site'
+- job: azure_devops_agent
+  displayName: "Build Mkdocs Site"
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+    - task: Bash@3
+      displayName: 'install and build mkdocs'
+      inputs:
+        targetType: inline
+        script: |
+          sudo apt install python3-pip
+          pip3 install --upgrade pip && pip3 install mkdocs mkdocs-material mkdocs-material-extensions
+          mkdocs build
+    - task: PublishBuildArtifacts@1
+      displayName: 'site publish artifact'
+      inputs:
+        PathtoPublish: '$(Build.SourcesDirectory)/site'
+        artifactName: 'site'
 
 
 
-  - job: self_signed_agent
-    dependsOn: azure_devops_agent
-    pool: Development
-    steps:
-      - task: Kubernetes@1
-        displayName: 'k8s login'
-        inputs:
-          connectionType: Kubernetes Service Connection
-          kubernetesServiceEndpoint: $(k8s_connection)
-          command: login
-        
-      - task: Bash@3
-        displayName: 'kubectl apply k8s manifest'
-        inputs:
-          targetType: inline
-          script: |
-            export artifact_url='$(System.TeamFoundationCollectionUri)$(System.TeamProjectId)/_apis/build/builds/$(Build.BuildId)/artifacts?artifactName=site&api-version=7.1&%24format=zip'
-            export access_token=$(echo -n "pat:$(token)" | base64)
-            export site='$(site)'
-            export site_url='$(site_url)'
-            export namespace='$(namespace)'
-            envsubst < manifest.yml | kubectl apply -f -
-            
-      - task: git-tag-on-release-task@9
-        displayName: 'add version tag on pr to master'
-        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
-        inputs:
-          staticTagName: '$(Build.BuildId)'
-        
+- job: self_signed_agent
+  displayName: "Deploy To Kubernetes Prod"
+  dependsOn: azure_devops_agent
+  pool: Development
+  steps:
+    - task: Kubernetes@1
+      displayName: 'k8s login'
+      inputs:
+        connectionType: Kubernetes Service Connection
+        kubernetesServiceEndpoint: $(k8s_connection)
+        command: login
+    
+    - task: HelmInstaller@1
+      inputs:
+        helmVersionToInstall: 'latest'
+
+    - checkout: staticapp
+    - script: |
+        token=$(echo -n "pat:$(token)" | base64)
+        helm upgrade $(site) . --debug --install --insecure-skip-tls-verify --namespace $(namespace) --set artifact.token="$token" --set site.url=$(site_url) --set artifact.url="$(System.TeamFoundationCollectionUri)$(System.TeamProjectId)/_apis/build/builds/$(Build.BuildId)/artifacts?artifactName=site&api-version=7.1&%24format=zip"
+      displayName: 'Install or upgrade chart'
+
+    - task: git-tag-on-release-task@9
+      displayName: 'add version tag on pr to dev'
+      condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+      inputs:
+        staticTagName: '$(Build.BuildId)'
