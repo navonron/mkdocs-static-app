@@ -82,10 +82,13 @@ jobs:
           echo -------------generate readme---------------
           echo -------------------------------------------
           readme-generator -v ../values.yaml --readme ../README.md
+          readme-generator -v ../values.yaml --readme ../NOTES.txt
           echo -------------------------------------------
           echo --------------print readme-----------------
           echo -------------------------------------------
           cat ../README.md
+          echo -------------------------------------------
+          cat ../NOTES.txt
           echo -------------------------------------------
           echo -------------remove bitnami----------------
           echo -------------------------------------------
@@ -96,8 +99,8 @@ jobs:
           echo -------------------------------------------
           git config --global --edit
           git commit --amend --reset-author
-          git add README.md
-          git commit -m "Update README.md with generated content"
+          git add README.md NOTES.txt
+          git commit -m "Update README.md and NOTES.txt with generated content"
           originalUrl="$(staticapp-repo-url)"
           modifiedUrl="${originalUrl/https:\/\/sagixavisar@/}"
           git push https://$(token)@$modifiedUrl HEAD:ron
