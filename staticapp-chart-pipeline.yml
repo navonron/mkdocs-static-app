@@ -2,16 +2,17 @@ trigger: []
 
 resources:
   repositories:
-    - repository: staticapp              # The alias of the repo in this pipeline
-      type: git                          # A git repository
-      name: DevOps/staticapp-chart       # The project/repository
-      ref: refs/heads/ron                # What branch / tag to get.
+    - repository: staticapp       
+      type: git                   
+      name: DevOps/staticapp-chart
+      ref: ron         
   pipelines:
-    - pipeline: artifactpipeline         # identifier for the resource used in pipeline resource variables
-      source: artifact-pipeline          # name of the pipeline that produces an artifact
+    - pipeline: artifactpipeline  
+      source: artifact-pipeline   
 
 variables:
   - group: wiki-token
+
   - name: site
     value: libi-devops-docs
   - name: site-url
@@ -24,6 +25,8 @@ variables:
     value: 0.1.0
   - name: staticapp-repo-url
     value: $[ resources.repositories.staticapp.url ]
+  - name: staticapp-repo-branch
+    value: $[ resources.repositories.staticapp.ref ]
 
 jobs:
 - job: self_signed_agent
@@ -82,28 +85,31 @@ jobs:
           echo -------------generate readme---------------
           echo -------------------------------------------
           readme-generator -v ../values.yaml --readme ../README.md
-          readme-generator -v ../values.yaml --readme ../NOTES.txt
+          readme-generator -v ../values.yaml --readme ../templates/NOTES.txt
           echo -------------------------------------------
           echo --------------print readme-----------------
           echo -------------------------------------------
           cat ../README.md
           echo -------------------------------------------
-          cat ../NOTES.txt
+          cat ../templates/NOTES.txt
           echo -------------------------------------------
           echo -------------remove bitnami----------------
           echo -------------------------------------------
           cd ..
           rm -rf ./readme-generator-for-helm
           echo -------------------------------------------
-          echo ----commet changes to staticsit repo-------
+          echo ----commet changes to staticsite repo------
           echo -------------------------------------------
           git config --global --edit
           git commit --amend --reset-author
+
           git add README.md NOTES.txt
           git commit -m "Update README.md and NOTES.txt with generated content"
+          
           originalUrl="$(staticapp-repo-url)"
-          modifiedUrl="${originalUrl/https:\/\/sagixavisar@/}"
-          git push https://$(token)@$modifiedUrl HEAD:ron
+          modifiedUrl="${originalUrl#*@}"
+
+          git push https://$(token)@$modifiedUrl HEAD:$(staticapp-repo-branch) --force
 
     - task: Bash@3
       displayName: 'install / upgrade chart'
@@ -111,7 +117,7 @@ jobs:
         targetType: inline
         script: |
           token=$(echo -n "pat:$(token)" | base64)
-          helm upgrade $(site) . --debug --install --insecure-skip-tls-verify --namespace $(namespace) --set artifact.token="$token" --set site.url=$(site-url) --set artifact.url="$(System.TeamFoundationCollectionUri)$(System.TeamProjectId)/_apis/build/builds/$(resources.pipeline.artifactpipeline.runID)/artifacts?artifactName=site&api-version=7.1&%24format=zip"
+          helm upgrade $(site) . --atomic --debug --install --insecure-skip-tls-verify --namespace $(namespace) --set artifact.token="$token" --set site.url=$(site-url) --set artifact.url="$(System.TeamFoundationCollectionUri)$(System.TeamProjectId)/_apis/build/builds/$(resources.pipeline.artifactpipeline.runID)/artifacts?artifactName=site&api-version=7.1&%24format=zip"
 
     - task: git-tag-on-release-task@9
       displayName: 'add version tag on pr to master'
